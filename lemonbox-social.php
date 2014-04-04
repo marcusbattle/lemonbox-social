@@ -28,18 +28,20 @@
 	$composite_key = twitter_build_composite_key( $api_secret ); //first request, no request token yet
 	$oauth_settings['oauth_signature'] = base64_encode(hash_hmac('sha1', $url, $composite_key, true)); //sign the base string
 
-	$auth_header = twitter_build_auth_header( $oauth_settings );
+	$response = sendRequest( $oauth_settings, $url ); //make the call
 
-	echo $auth_header;
+	echo "<pre>";
+	var_dump( $response );
+	echo "</pre>";
 
 	function twitter_build_oauth_string( $endpoint, $params ) {	
  
-		$r = array(); //temporary array
-	    ksort($params); //sort params alphabetically by keys
+		$r = array(); 
+	    ksort($params);
 
 	    foreach( $params as $key => $value ) {
-	        $r[] = "$key=" . rawurlencode($value); //create key=value strings
-	    }//end foreach                
+	        $r[] = "$key=" . rawurlencode($value);
+	    }
 	 
 	    return "POST&" . rawurlencode($endpoint) . '&' . rawurlencode(implode('&', $r)); //return complete base string
 	}
@@ -59,6 +61,26 @@
 	 
 	    $r .= implode(', ', $values); //reassemble
 	    return $r; //return full authorization header
+	}
+
+	function sendRequest( $oauth_settings, $endpoint ) {
+	    $header = array( twitter_build_auth_header($oauth_settings), 'Expect:'); //create header array and add 'Expect:'
+	 
+	    $options = array(
+	    	CURLOPT_HTTPHEADER => $header, //use our authorization and expect header
+           CURLOPT_HEADER => false, //don't retrieve the header back from Twitter
+           CURLOPT_URL => $endpoint, //the URI we're sending the request to
+           CURLOPT_POST => true, //this is going to be a POST - required
+           CURLOPT_RETURNTRANSFER => true, //return content as a string, don't echo out directly
+           CURLOPT_SSL_VERIFYPEER => false //don't verify SSL certificate, just do it
+        ); 
+	 
+	    $ch = curl_init(); //get a channel
+	    curl_setopt_array($ch, $options); //set options
+	    $response = curl_exec($ch); //make the call
+	    curl_close($ch); //hang up
+	 
+	    return $response;
 	}
 
 	exit;
